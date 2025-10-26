@@ -4,7 +4,7 @@ int main(void)
     long long seconds;
     printf("输入秒数：");
     scanf("%lld",seconds);
-    printf("%lld秒\n",seconds);
+    printf("%lld秒=",seconds);
     int days=seconds/86400;
     int hours=(seconds%86400)/3600;
     int minutes=(seconds%3600)/60;
