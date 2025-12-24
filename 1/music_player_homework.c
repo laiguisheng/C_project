@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<time.h>
 
 // 歌曲节点结构体
 typedef struct Song {
@@ -99,12 +100,13 @@ void add_song(PlaylistManager* manager, const char* title, const char* artist,
         Song* temp=manager->tail;
         manager->tail=tailsong;
         temp->next=tailsong;
+        temp=NULL;
     }
+    tailsong->id=manager->song_count;
     manager->song_count++;
     strcpy(tailsong->title,title);
     strcpy(tailsong->artist,artist);
     strcpy(tailsong->filepath,filepath);
-    tailsong->id=manager->song_count;
     printf("已添加歌曲：%s - %s",tailsong->artist,tailsong->title);
     return;
 }
@@ -125,6 +127,7 @@ void display_playlist(PlaylistManager* manager) {
     }
     printf("==================================================\n");
     manager->current=temp;
+    temp=NULL;
     return;
 }
 
@@ -168,6 +171,7 @@ int delete_songs_by_title(PlaylistManager* manager, const char* title) {
                     free(to_delete);
                     to_delete=NULL;
                     deleted_count++;
+                    prev=NULL;
                 }
                 else if(to_delete==manager->current){
                     printf("已删除歌曲: %s - %s (path: %s)\n",
@@ -188,18 +192,21 @@ int delete_songs_by_title(PlaylistManager* manager, const char* title) {
                     free(to_delete);
                     to_delete=temp;
                     deleted_count++;
+                    temp=NULL;
                 }
             }
             else{
                 to_delete=to_delete->next;
             }
         }
+        manager->song_count-=deleted_count;
         if(deleted_count>0){
             printf("共删除 %d 首标题为 \"%s\" 的歌曲\n", deleted_count, title);
         }
         else{
             printf("未找到标题为 \"%s\" 的歌曲\n", title);
         }
+        to_delete=NULL;
     }
     return 0;
 }
@@ -232,17 +239,81 @@ int play_song_by_title(PlaylistManager* manager, const char* title){
 
 // 5. 将播放列表保存到文件
 int export_playlist(PlaylistManager* manager, const char* filename) {
+    if(manager->head==NULL){
+        printf("播放列表为空，无法保存\n");
+    }
+    else{
+        FILE *list = fopen(filename, "w");
+        int saved_count=0;
+        Song* temp=manager->head;
+        if(list==NULL){
+            printf("无法创建文件:%s\n",filename);
+        }
+        else{
+            while(manager->head!=NULL){
+                fprintf(list,"%s,%s,%s",
+                    manager->head->title,
+                    manager->head->artist,
+                    manager->head->filepath);
+                manager->head=manager->head->next;
+                saved_count++;
+            }
+            manager->head=temp;
+            printf("已保存%d首歌曲到文件:%s\n",saved_count,
+                filename);
+        }
+        temp=NULL;
+    }
     return 0;
 }
 
 // 6. 随机播放歌曲（非必做）
 int play_song_random(PlaylistManager* manager) {
+    if(manager->head==NULL){
+        printf("播放列表为空\n");
+    }
+    else{
+        srand((unsigned int)time(NULL));
+        int randid= rand()%(manager->song_count+1);
+        manager->current=manager->head;
+        while(manager->current->id!=randid){
+            manager->current=manager->current->next;
+        }
+        printf("Founded File!\n");
+    }
     return 0;
 }
 
 // 7. 在指定位置插入歌曲（非必做）
 int insert_song_at(PlaylistManager* manager, int position, const char* title, 
                    const char* artist, const char* filepath) {
+    if(position>manager->song_count||position<0){
+        printf("无效的位置!有效范围:0 - %d\n",manager->song_count);
+        return 0;
+    }
+    Song* temp=manager->head;
+    Song* prev=NULL;
+    Song* newsong=(Song*)malloc(sizeof(Song));
+    while(manager->head->id!=position){
+        prev=manager->head;
+        manager->head=manager->head->next;
+    }
+    if(position==manager->song_count){
+        manager->tail->next=newsong;
+        manager->tail=newsong;
+        manager->head=temp;
+    }
+    if(position==0){
+        manager->head=newsong;
+        newsong->next=temp;
+    }
+    else{
+        prev->next=newsong;
+        newsong->next=manager->head;
+        manager->head=temp;
+    }
+    prev=NULL;
+    temp=NULL;
     return 0;
 }
 
