@@ -89,21 +89,144 @@ void init_playlist_manager(PlaylistManager* manager){
 // 1. 在链表末尾添加歌曲
 void add_song(PlaylistManager* manager, const char* title, const char* artist, 
               const char* filepath) {
+    Song* tailsong=(Song*)malloc(sizeof(Song));
+    if(manager->head==NULL){
+        manager->head=tailsong;
+        manager->current=tailsong;
+        manager->tail=tailsong;
+    }
+    else{
+        Song* temp=manager->tail;
+        manager->tail=tailsong;
+        temp->next=tailsong;
+    }
+    manager->song_count++;
+    strcpy(tailsong->title,title);
+    strcpy(tailsong->artist,artist);
+    strcpy(tailsong->filepath,filepath);
+    tailsong->id=manager->song_count;
+    printf("已添加歌曲：%s - %s",tailsong->artist,tailsong->title);
     return;
 }
 
 // 2. 显示播放列表
 void display_playlist(PlaylistManager* manager) {
+    Song* temp=manager->current;
+    manager->current=manager->head;
+    printf("\n播放列表(%d 首歌曲)\n",manager->song_count);
+    printf("==================================================\n");
+    while(manager->current!=NULL){
+        printf("%3d.%-20s -%-30s (%30s)",
+            manager->current->id,
+            manager->current->title,
+            manager->current->artist,
+            manager->current->filepath);
+        manager->current=manager->current->next;
+    }
+    printf("==================================================\n");
+    manager->current=temp;
     return;
 }
 
 // 3. 删除歌曲
 int delete_songs_by_title(PlaylistManager* manager, const char* title) {
+    if(manager->head==NULL){
+        printf("播放列表为空，无法删除歌曲\n");
+        return 0;
+    }
+    else{
+        Song* to_delete=manager->head;
+        int deleted_count=0;
+        while(to_delete!=NULL){
+            if(to_delete->title==title){
+                if(to_delete==manager->head){
+                    printf("已删除歌曲: %s - %s (path: %s)\n",
+                         to_delete->artist,
+                          to_delete->title,
+                           to_delete->filepath);
+                    if(to_delete==manager->current){
+                        manager->current=to_delete->next;
+                    }
+                    manager->head=to_delete->next;
+                    free(to_delete);
+                    to_delete=manager->head->next;
+                    deleted_count++;
+                }
+                else if(to_delete==manager->tail){
+                    printf("已删除歌曲: %s - %s (path: %s)\n",
+                         to_delete->artist,
+                          to_delete->title,
+                           to_delete->filepath); 
+                    if(to_delete==manager->current){
+                        manager->current=manager->head;
+                    }
+                    Song* prev=manager->head;
+                    while(prev->next!=to_delete){
+                        prev=prev->next;
+                    }
+                    manager->tail=prev;
+                    free(to_delete);
+                    to_delete=NULL;
+                    deleted_count++;
+                }
+                else if(to_delete==manager->current){
+                    printf("已删除歌曲: %s - %s (path: %s)\n",
+                         to_delete->artist,
+                          to_delete->title,
+                           to_delete->filepath);
+                    manager->current=manager->current->next;
+                    free(to_delete);
+                    to_delete=manager->current;
+                    deleted_count++;
+                }
+                else{
+                    printf("已删除歌曲: %s - %s (path: %s)\n",
+                         to_delete->artist,
+                          to_delete->title,
+                           to_delete->filepath);
+                    Song* temp=to_delete->next;
+                    free(to_delete);
+                    to_delete=temp;
+                    deleted_count++;
+                }
+            }
+            else{
+                to_delete=to_delete->next;
+            }
+        }
+        if(deleted_count>0){
+            printf("共删除 %d 首标题为 \"%s\" 的歌曲\n", deleted_count, title);
+        }
+        else{
+            printf("未找到标题为 \"%s\" 的歌曲\n", title);
+        }
+    }
     return 0;
 }
 
 // 4. 播放歌曲
 int play_song_by_title(PlaylistManager* manager, const char* title){
+    if(manager->head==NULL){
+        printf("播放列表为空，无法删除歌曲\n");
+    }
+    else{
+        manager->current=manager->head;
+        int founded_count=0;
+        while(manager->current!=NULL&&founded_count!=1){
+            if(manager->current->title==title){
+                founded_count=1;
+            }
+            else{
+                manager->current=manager->current->next;
+            }
+        }
+        if(founded_count>0){
+            printf("已播放标题为\"%s\"的歌曲\n",title);
+        }
+        else{
+            printf("未找到标题为\"%s\"的歌曲\n",title);
+        }
+    }
     return 0;
 }
 
