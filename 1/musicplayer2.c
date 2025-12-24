@@ -112,8 +112,8 @@ void add_song(PlaylistManager* manager, const char* title, const char* artist, c
         tailsong->prev=temp;
         temp=NULL;
     }
-    tailsong->id=manager->song_count;
     manager->song_count++;
+    tailsong->id=manager->song_count;
     strcpy(tailsong->title,title);
     strcpy(tailsong->artist,artist);
     strcpy(tailsong->filepath,filepath);
@@ -142,9 +142,10 @@ int delete_song_by_title(PlaylistManager* manager, const char* title) {
                         manager->current=to_delete->next;
                     }
                     manager->head=to_delete->next;
+                    manager->head->prev=NULL;
                     free(to_delete);
                     if(manager->head!=NULL){
-                        to_delete=manager->head->next;
+                        to_delete=manager->head;
                     }
                     else{
                         to_delete=NULL;
@@ -156,11 +157,12 @@ int delete_song_by_title(PlaylistManager* manager, const char* title) {
                          to_delete->artist,
                           to_delete->title,
                            to_delete->filepath); 
-                    if(to_delete==manager->current){
-                        manager->current=manager->head;
-                    }
                     manager->tail=to_delete->prev;
+                    if(to_delete==manager->current){
+                        manager->current=manager->tail;
+                    }
                     free(to_delete);
+                    manager->tail->next=NULL;
                     to_delete=NULL;
                     deleted_count++;
                 }
@@ -169,7 +171,10 @@ int delete_song_by_title(PlaylistManager* manager, const char* title) {
                          to_delete->artist,
                           to_delete->title,
                            to_delete->filepath);
+                    Song* temp=manager->current;
                     manager->current=manager->current->next;
+                    manager->current->prev=temp->prev;
+                    temp->prev->next=manager->current;
                     free(to_delete);
                     to_delete=manager->current;
                     deleted_count++;
@@ -179,12 +184,11 @@ int delete_song_by_title(PlaylistManager* manager, const char* title) {
                          to_delete->artist,
                           to_delete->title,
                            to_delete->filepath);
-                    Song* temp1=to_delete->next;
-                    Song* temp2=to_delete->prev;
-                    free(to_delete);
-                    to_delete=temp1;
-                    to_delete->prev=temp2;
-                    temp2->next=to_delete;
+                    Song* temp=to_delete;
+                    to_delete=to_delete->next;
+                    to_delete->prev=temp;
+                    temp->prev->next=to_delete;
+                    free(temp);
                     deleted_count++;
                 }
             }
@@ -199,13 +203,41 @@ int delete_song_by_title(PlaylistManager* manager, const char* title) {
         else{
             printf("未找到标题为 \"%s\" 的歌曲\n", title);
         }
-        to_delete=NULL;
+        to_delete=manager->head;
+        int new_id=0;
+        while(to_delete!=NULL){
+            to_delete->id=new_id;
+            new_id++;
+            to_delete=to_delete->next;
+        }
     }
     return 0;
 }
 
 // 3. 播放歌曲
 int play_song_by_title(PlaylistManager* manager, const char* title){
+    if(manager->head==NULL){
+        printf("播放列表为空，无法播放歌曲\n");
+    }
+    else{
+        manager->current=manager->head;
+        int founded_count=0;
+        while(manager->current!=NULL&&founded_count!=1){
+            if(strcmp(manager->current->title,title)==0){
+                founded_count=1;
+            }
+            else{
+                manager->current=manager->current->next;
+            }
+        }
+        if(founded_count>0){
+            play_audio(manager->current->filepath);
+            printf("已播放标题为\"%s\"的歌曲\n",title);
+        }
+        else{
+            printf("未找到标题为\"%s\"的歌曲\n",title);
+        }
+    }
     return 0;
 }
 
@@ -215,12 +247,14 @@ void display_playlist(PlaylistManager* manager) {
     printf("\n播放列表(%d 首歌曲)\n",manager->song_count);
     printf("==================================================\n");
     while(temp!=NULL){
-        printf("%3d.%-20s -%-30s (%30s)\n",
+        printf("%3d.%-20s -%-30s\n (%30s)\n 前驱：%s | 后继：%s\n",
             temp->id,
             temp->title,
             temp->artist,
-            temp->filepath);
-        temp=temp->next;
+            temp->filepath,
+            temp->prev,
+            temp->next);
+        temp=temp->prev;
     }
     printf("==================================================\n");
     temp=NULL;
@@ -233,11 +267,13 @@ void display_playlist_reverse(PlaylistManager* manager) {
     printf("\n播放列表(%d 首歌曲)\n",manager->song_count);
     printf("==================================================\n");
     while(temp!=NULL){
-        printf("%3d.%-20s -%-30s (%30s)\n",
+        printf("%3d.%-20s -%-30s\n (%30s)\n 前驱：%s | 后继：%s\n",
             temp->id,
             temp->title,
             temp->artist,
-            temp->filepath);
+            temp->filepath,
+            temp->prev,
+            temp->next);
         temp=temp->prev;
     }
     printf("==================================================\n");
@@ -247,21 +283,79 @@ void display_playlist_reverse(PlaylistManager* manager) {
 
 // 6. 将播放列表保存到文件
 int export_playlist(PlaylistManager* manager, const char* filename) {
+    if(manager->head==NULL){
+        printf("播放列表为空，无法保存\n");
+    }
+    else{
+        FILE *list = fopen(filename, "w");
+        int saved_count=0;
+        Song* temp=manager->head;
+        if(list==NULL){
+            printf("无法创建文件:%s\n",filename);
+        }
+        else{
+            while(temp!=NULL){
+                fprintf(list,"%s,%s,%s\n",
+                    temp->title,
+                    temp->artist,
+                    temp->filepath);
+                temp=temp->next;
+                saved_count++;
+            }
+            printf("已保存%d首歌曲到文件:%s\n",saved_count,
+                filename);
+            fclose(list);
+        }
+    }
     return 0;
 }
 
 // 7. 下一首
 void next_song(PlaylistManager* manager) {
+    if(manager->head==NULL){
+        printf("播放列表为空!\n");
+    }
+    if(manager->current->next==NULL){
+        printf("已是最后一首歌曲\n");
+    }
+    else{
+        manager->current=manager->current->next;
+        play_audio(manager->current->filepath);
+        printf("Founded File!\n");
+    }
     return;
 }
 
 // 8. 上一首
 void previous_song(PlaylistManager* manager) {
+    if(manager->head==NULL){
+        printf("播放列表为空!\n");
+    }
+    else if(manager->current->prev==NULL){
+        printf("已是第一首歌曲\n");
+    }
+    else{
+        manager->current=manager->current->next;
+        play_audio(manager->current->filepath);
+        printf("Founded File!\n");
+    }
     return;
 }
 
 // 9. 随机播放歌曲（非必做）
 int play_song_random(PlaylistManager* manager) {
+    if(manager->head==NULL){
+        printf("播放列表为空\n");
+    }
+    else{
+        int randid= rand()%(manager->song_count)+1;
+        manager->current=manager->head;
+        while(manager->current->id!=randid){
+            manager->current=manager->current->next;
+        }
+        play_audio(manager->current->filepath);
+        printf("Founded File!\n");
+    }
     return 0;
 }
 
@@ -273,6 +367,7 @@ int insert_song_at(PlaylistManager* manager, int position, const char* title,
 
 // 12. 按歌曲标题排序（非必做）
 void sort_by_title(PlaylistManager* manager) {
+    Song* temp=manager->head;
     return;
 }
 
@@ -333,6 +428,7 @@ int main() {
     PlaylistManager manager;
     init_playlist_manager(&manager);
     load_songs_from_file(&manager,"song_list.txt");
+    srand((unsigned int)time(NULL));
 
     printf("=== 双向链表音乐播放器管理器 ===\n");
     printf("已加载 %d 首示例歌曲\n", manager.song_count);

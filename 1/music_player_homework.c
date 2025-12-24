@@ -101,8 +101,8 @@ void add_song(PlaylistManager* manager, const char* title, const char* artist,
         manager->tail=tailsong;
         temp->next=tailsong;
     }
-    tailsong->id=manager->song_count;
     manager->song_count++;
+    tailsong->id=manager->song_count;
     strcpy(tailsong->title,title);
     strcpy(tailsong->artist,artist);
     strcpy(tailsong->filepath,filepath);
@@ -216,7 +216,7 @@ int delete_songs_by_title(PlaylistManager* manager, const char* title) {
             printf("未找到标题为 \"%s\" 的歌曲\n", title);
         }
         to_delete=manager->head;
-        int new_id=0;
+        int new_id=1;
         while(to_delete!=NULL){
             to_delete->id=new_id;
             new_id++;
@@ -288,7 +288,7 @@ int play_song_random(PlaylistManager* manager) {
         printf("播放列表为空\n");
     }
     else{
-        int randid= rand()%manager->song_count;
+        int randid= rand()%(manager->song_count)+1;
         manager->current=manager->head;
         while(manager->current->id!=randid){
             manager->current=manager->current->next;
@@ -302,7 +302,7 @@ int play_song_random(PlaylistManager* manager) {
 // 7. 在指定位置插入歌曲（非必做）
 int insert_song_at(PlaylistManager* manager, int position, const char* title, 
                    const char* artist, const char* filepath) {
-    if(position>manager->song_count||position<0){
+    if(position>manager->song_count||position<=0){
         printf("无效的位置!有效范围:0 - %d\n",manager->song_count);
         return 0;
     }
@@ -330,7 +330,7 @@ int insert_song_at(PlaylistManager* manager, int position, const char* title,
         manager->tail=newsong;
         newsong->next=NULL;
     }
-    else if(position==0){
+    else if(position==1){
         manager->head=newsong;
         newsong->next=temp;
     }
@@ -344,7 +344,7 @@ int insert_song_at(PlaylistManager* manager, int position, const char* title,
     strcpy(newsong->title,title);
     manager->song_count++;
     temp=manager->head;
-    int new_id=0;
+    int new_id=1;
     while(temp!=NULL){
         temp->id=new_id;
         new_id++;
