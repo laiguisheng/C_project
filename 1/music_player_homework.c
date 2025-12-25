@@ -136,6 +136,19 @@ int delete_songs_by_title(PlaylistManager* manager, const char* title) {
         printf("播放列表为空，无法删除歌曲\n");
         return 0;
     }
+    else if(manager->song_count==1){
+        if(strcmp(manager->head->title,title)==0){
+            printf("已删除歌曲: %s - %s (path: %s)\n",
+                manager->head->artist,
+                manager->head->title,
+                manager->head->filepath);
+            free(manager->head);
+            manager->head=NULL;
+            manager->current=NULL;
+            manager->song_count--;
+            manager->tail=NULL;
+        }
+    }
     else{
         Song* to_delete=manager->head;
         Song* prev=NULL;
@@ -302,12 +315,13 @@ int play_song_random(PlaylistManager* manager) {
 // 7. 在指定位置插入歌曲（非必做）
 int insert_song_at(PlaylistManager* manager, int position, const char* title, 
                    const char* artist, const char* filepath) {
-    if(position>manager->song_count||position<=0){
+    if(position>manager->song_count||position<0){
         printf("无效的位置!有效范围:0 - %d\n",manager->song_count);
         return 0;
     }
     Song* temp=manager->head;
     Song* prev=NULL;
+    position++;
     Song* newsong=(Song*)malloc(sizeof(Song));
     if(manager->head==NULL){
         manager->head=newsong;
@@ -316,16 +330,15 @@ int insert_song_at(PlaylistManager* manager, int position, const char* title,
         manager->song_count++;
         strcpy(newsong->artist,artist);
         strcpy(newsong->filepath,filepath);
-        newsong->id=position;
         newsong->next=NULL;
         strcpy(newsong->title,title);
         return 0;
     }
-    while(temp->id!=position){
+    while(temp->id!=position&&temp!=NULL){
         prev=temp;
         temp=temp->next;
     }
-    if(position==manager->song_count){
+    if(position>manager->song_count){
         manager->tail->next=newsong;
         manager->tail=newsong;
         newsong->next=NULL;
@@ -335,6 +348,9 @@ int insert_song_at(PlaylistManager* manager, int position, const char* title,
         newsong->next=temp;
     }
     else{
+        while(temp->id!=position){
+            temp=temp->next;
+        }
         prev->next=newsong;
         newsong->next=temp;
     }
