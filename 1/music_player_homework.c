@@ -75,6 +75,38 @@ void play_audio(const char* filename){
 
 
 int load_songs_from_file(PlaylistManager* manager, const char* filename){
+    FILE* list=fopen(filename,"r");
+    if(list==NULL){
+        printf("无法打开文件\n");
+        return 0;
+    }
+    char store[1000];
+    int loadsong=0;
+    while(fgets(store,sizeof(store),list)!=NULL){
+        size_t len=strlen(store);
+        while(len>0&&(store[len-1]=='\n'||store[len-1]=='\r'||store[len-1]==' ')){
+            store[--len]='\0';
+        }
+        if(len==0){
+            continue;//跳过空行
+        }
+        char title[100] = {0};
+        char artist[50] = {0};
+        char filepath[300] = {0};
+        char* token = strtok(store, ",");
+        if (token == NULL) continue; 
+        strncpy(title, token, sizeof(title)-1);
+        token = strtok(NULL, ",");
+        if (token == NULL) continue;
+        strncpy(artist, token, sizeof(artist)-1);
+        token = strtok(NULL, ",");
+        if (token == NULL) continue;
+        strncpy(filepath, token, sizeof(filepath)-1);
+        add_song(manager, title, artist, filepath);
+        loadsong++;
+    }
+    fclose(list);
+    printf("从文件%s成功加载%d首歌曲\n",filename,loadsong);
     return 0;
 }
 
